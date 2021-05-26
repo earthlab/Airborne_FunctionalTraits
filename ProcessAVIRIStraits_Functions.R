@@ -4,34 +4,14 @@ library(gdalUtils)
 library(sf)
 library(ggplot2)
 
-# ##### Given Variables
-# AVIRISpath = "/Users/natasha/Desktop/RussianRiver_Analysis/2018-AVIRIS/"
-# boundingKML = "/Users/natasha/Desktop/RussianRiver_Analysis/RR_HU8_projected.kml"
-# missingData = -9999
-# # From Wang et al. (2020) New Phytologist, Table 1
-# dataThresholds = c(700,4,500,15,0,5,900,600,600,75,500,300,5,400)
-# traits = c("Carbon","carotenoid","Cellulose","chl","d13C","d15N","Fiber","Lignin",
-#           "LMA","Nitrogen","NSC","Phenolics","Phosphorus","Sugar")
-# # For testing
-# trait = traits[1]
-# dataThreshold= dataThresholds[1]
-# saveFile=FALSE
-# 
-# ##### Derived Variables
-# # list only geotiffs and ignore JSON
-# AVIRIStifs = list.files(AVIRISpath,pattern="\\.tif$") #list all Tifs
-# # list only trait data
-# AVIRIStraits = Filter(function(x) grepl("PLSR",x), AVIRIStifs)
-# #perimeter = st_read(boundingKML)
-# perimeter = boundingKML
-
 clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
-                                     missingData,dataThreshold,saveFile=FALSE){
+                                     missingData,dataThresholds,saveFile=FALSE){
   # Preconditions:traitGeoTiffs = list of trait geotiff file names as strings, 
   #       assumed to be in the same folder, path is a string with the path
   #       to that folder; trait = the string of the trait name as spelt in filename,
   #       missingData is the data value used for missing data and the
-  #       dataThreshold is the max value for "reasonable" data. Savefile = FALSE
+  #       dataThresholds is a list with the max value for "reasonable" data and
+  #       the min value for "reasonable data. Savefile = FALSE
   #       will remove the warpped, clipped geotiff; TRUE will keep it.
   # Postcondition: list of clipped and cleaned rasters of each flightline
   
@@ -57,9 +37,9 @@ clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
                                cutline = boundingKML,srcnodata = missingData,
                                dstnodata = missingData, ot = 'Float32')
     
-    
     # mask bad values
-    data_rectified[data_rectified >= dataThreshold] <- missingData
+    data_rectified[data_rectified >= dataThresholds[[1]]] <- missingData
+    data_rectified[data_rectified <= dataThresholds[[2]]] <- missingData
     
     # edit geotif for new data_rectified with masked bad values
     writeRaster(data_rectified, 
@@ -74,66 +54,6 @@ clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
     if (saveFile == FALSE){file.remove(paste(gsub("\\..*","",datafile),"_clip.tif",sep=""))}
   }
   return(flightline_data)
-}
-
-mosaic_flightlines <- function(flightline_data){
-  # Precondition: flightline_data is a list of raster objects as flightlines
-  # Postcondition: mosaiced flightlines
-  
-  # Create template to align origin of raster objects
-  # template is an empty raster that has the projected extent of second raster
-  # in flightline_data list, but is aligned with the first raster in the 
-  # flightline_data list (i.e. same resolution, origin, and crs of flightline_data[[1]])
-  
-  
-  ##########
-  # template<- projectRaster(from = flightline_data[[2]], to= flightline_data[[1]],
-  #                          alignOnly=TRUE)
-  # 
-  # # Align origin of raster objects to template
-  # aligned_df_list <- list()
-  # print("Aligning raster objects. This may take awhile.")
-  # aligned_df_list[[1]] <- as.data.frame(flightline_data[[1]], xy=TRUE, na.rm = TRUE)
-  # for (i in 2:length(flightline_data)){
-  #   print(paste("working on ",as.character(i)," of ",
-  #               as.character(length(flightline_data))))
-  # 
-  #   #creates a new layer based on flightline # in flightline_data list
-  #   aligned_raster_name <- paste("fl",i,"_df_aligned",sep="")
-  #   aligned_df_list[[i]]<- as.data.frame(assign(aligned_raster_name,
-  #          projectRaster(from = flightline_data[[i]], to= template)),
-  #          xy=TRUE, na.rm = TRUE)
-  #   rm(as.name(aligned_raster_name))
-  #  }
-  
-  # merge/mosaic all flightlines. In merge function if objects overlap, 
-  # the values get priority in the same order
-  # as the arguments (but NA values are ignored), but in mosaic a function is 
-  # applied to compute cell values in areas where layers overlap.
-  # print("Merging raster objects. This may take awhile.")
-  #r_merged<- Reduce(function(x, y) merge(x, y, all=TRUE), aligned_df_list)
-  
-  #########
-  # get list of all flightlines in folder
-  # trait_data_clipped
-  # 
-  # 
-  # 
-  # layer1 <- system.file("external/tahoe_lidar_bareearth.tif", package="gdalUtils")
-  # layer2 <- system.file("external/tahoe_lidar_highesthit.tif", package="gdalUtils")
-  # mosaic_rasters(gdalfile=c(layer1,layer2),dst_dataset=file.path(outdir,"test_mosaic.envi"),
-  #                separate=TRUE,of="ENVI",verbose=TRUE)
-  
-  
-  # #For mosaic.. example not yet code
-  # x <- list(r1, r2, r3)
-  # names(x)[1:2] <- c('x', 'y')
-  # x$fun <- mean
-  # x$na.rm <- TRUE
-  # 
-  # m <- do.call(mosaic, x)
-  
-  
 }
 
 plot_flightlines <-function(flightline_data){
