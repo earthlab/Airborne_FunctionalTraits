@@ -9,18 +9,27 @@ library(gdalUtils)
 library(sf)
 library(ggplot2)
 library(caTools)
-source("/Users/natasha/Coding/RFunctions/ProcessAVIRIStraits/Functions/Preprocess.R")
-source("/Users/natasha/Coding/RFunctions/ProcessAVIRIStraits/Initial_Parameters.R")
-source("/Users/natasha/Coding/RFunctions/ProcessAVIRIStraits/Functions/Diversity.R")
-source("/Users/natasha/Coding/RFunctions/ProcessAVIRIStraits/Functions/Analysis.R")
+library(plot.matrix)
+source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Preprocess.R")
+source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Initial_Parameters.R")
+source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Diversity.R")
 
-# Mosaic Flightlines assuming all flightlines are saved to one path
-mosaic_flightlines(tratis = traits, AVIRSpath = AVIRISpath,
-                   bounding_vector = boundingKML, missingData = missingData,
-                   dataThresholds_upper = dataThresholds_upper,
-                   dataThresholds_lower = dataThresholds_lower,
-                   save_intermediate_output = FALSE, 
-                   outputfile_descriptor = outputfile_descriptor)
+AVIRISmosaics <- 
+  list.files(AVIRISpath,pattern= paste0(outputfile_descriptor,"_mosaic_"))
+
+if (length(AVIRISmosaics) == 0){
+  # Mosaic Flightlines assuming all flightlines are saved to one path
+  mosaic_flightlines(tratis = traits, AVIRSpath = AVIRISpath,
+                     bounding_vector = boundingKML, missingData = missingData,
+                     dataThresholds_upper = dataThresholds_upper,
+                     dataThresholds_lower = dataThresholds_lower,
+                     save_intermediate_output = FALSE, 
+                     outputfile_descriptor = outputfile_descriptor) 
+}
+
+i = 1
+trait_test <- raster(paste0(AVIRISpath,AVIRISmosaics[i]),band=1)
+trait_normalized <- normalize_traits(trait_test)
 
 # ##### Begin Mosaics of Traits ####
 # for (i in 1:length(traits)){

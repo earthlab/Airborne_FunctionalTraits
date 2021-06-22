@@ -122,10 +122,30 @@ mosaic_flightlines <- function(traits, AVIRISpath,bounding_vector, missingData,
   }
 }
 
-normalize_traits <- function(){
-  # Preconditions:
+raster2matrix <- function(RasterLayer){
+  # Precondition: RasterLayer is a raster object
+  
+  # Postcondition: a matrix object of the RasterLayer data values
+  
+  if(dim(RasterLayer)[3] <= 1){
+    A <- raster::as.matrix(RasterLayer)
+    m <- t(A[nrow(A):1,])
+  }else{
+    m <- aperm(raster::as.array(flip(RasterLayer,direction=2)),c(2,1,3))
+  }
+  return(m)
+}
+
+normalize_traits <- function(RasterLayer){
+  # Precondition: R is a raster object of trait data to be normalized
   
   # Postconditions: normalized trait raster to provide values between 0 and 1. 
   #           See Fabian D Schneider et al. (2017) Nature Communications
   #           DOI: 10.1038/s41467-017-01530-3.
+  
+  raster_matrix <- raster2matrix(RasterLayer)
+  raster_max <- max(raster_matrix[!is.na(raster_matrix)])
+  raster_matrix_normalized <- apply(raster_matrix, MARGIN = c(1,2), FUN = function(x) x/(trait_max))
+  
+  return (raster_matrix_normalized)
 }
