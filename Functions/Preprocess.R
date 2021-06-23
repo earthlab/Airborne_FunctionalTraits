@@ -57,11 +57,11 @@ clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
   return(flightline_data)
 }
 
-mosaic_flightlines <- function(traits, AVIRISpath,bounding_vector, missingData,
+mosaic_flightlines <- function(traits, path, bounding_vector, missingData,
                                dataThresholds_upper, dataThresholds_lower,
                                save_intermediate_output = FALSE,outputfile_descriptor){
   # Preconditions: traits are a list of strings specifying the traits to process,
-  #       AVIRISpath is a string with the path to the folder with all the trait geotiffs,
+  #       path is a string with the path to the folder with all the trait geotiffs,
   #       bounding_vector is a vector file (e.g., kml or esri shapefile) for the area
   #       to which we clip the trait data, missingData is the assumed value of
   #       the missing data, dataThresholds_upper is a vector of the upper thresholds
@@ -72,14 +72,14 @@ mosaic_flightlines <- function(traits, AVIRISpath,bounding_vector, missingData,
   #       outputfile_descriptor is a string for naming the output file. Recommend
   #       "FlightboxName_date" or something equivalent.
   
-  # Postcondition: A saved geotiff to AVIRISpath of the mosaicked traits
+  # Postcondition: A saved geotiff to path of the mosaicked traits
   
   ##### Begin Mosaics of Traits ####
   for (i in 1:length(traits)){
     print (paste("Working on trait: ",traits[i],sep=""))
     
     # get geotiff list
-    AVIRIStifs <- list.files(AVIRISpath,pattern="\\.tif$") #list all Tifs
+    AVIRIStifs <- list.files(path,pattern="\\.tif$") #list all Tifs
     trait_data <- Filter(function(x) grepl(traits[i],x), AVIRIStifs)
     
     # Clean Data, but first check if you have run this function before 
@@ -87,7 +87,7 @@ mosaic_flightlines <- function(traits, AVIRISpath,bounding_vector, missingData,
     trait_data_clipped <- Filter(function(x) grepl("clip",x), trait_data)
     if (length(trait_data_clipped) == 0){
       flightline_data <- clean_AVIRISFlightTraits(traitGeoTiffs = trait_data, 
-                                                  path = AVIRISpath,
+                                                  path = path,
                                                   trait = traits[i], 
                                                   missingData = missingData,
                                                   perimeter = bounding_vector, 
@@ -96,7 +96,7 @@ mosaic_flightlines <- function(traits, AVIRISpath,bounding_vector, missingData,
                                                   saveFile = save_intermediate_output)
       
       # get new clipped geotiff list
-      new_AVIRIStifs <- list.files(AVIRISpath,pattern="\\.tif$") #list all Tifs
+      new_AVIRIStifs <- list.files(path,pattern="\\.tif$") #list all Tifs
       new_AVIRIStraits <- Filter(function(x) grepl("PLSR",x), new_AVIRIStifs)
       trait_data <- Filter(function(x) grepl(traits[i],x), new_AVIRIStraits)
       trait_data_clipped <- Filter(function(x) grepl("clip_mask",x), trait_data)
@@ -107,12 +107,12 @@ mosaic_flightlines <- function(traits, AVIRISpath,bounding_vector, missingData,
     for (j in 1:length(trait_data_clipped)){
       layer_name <- paste("layer",j,sep="")
       clip_layer_list[j] <- assign(layer_name, 
-                                   paste(AVIRISpath,trait_data_clipped[j],sep=""))
+                                   paste(path,trait_data_clipped[j],sep=""))
     }
     
     # mosaic flightlines
     test <- mosaic_rasters(gdalfile=clip_layer_list,
-                           dst_dataset=paste(AVIRISpath,outputfile_descriptor,"_mosaic_",traits[i],".tif",sep=""),
+                           dst_dataset=paste(path,outputfile_descriptor,"_mosaic_",traits[i],".tif",sep=""),
                            r = "nearest", separate=FALSE, of = "GTiff", #of="ENVI",
                            verbose=FALSE,output_Raster = TRUE, vrtnodata = missingData,
                            hidenotdata = TRUE,addalpha=TRUE, overwrite=TRUE)
@@ -145,7 +145,7 @@ normalize_traits <- function(RasterLayer){
   
   raster_matrix <- raster2matrix(RasterLayer)
   raster_max <- max(raster_matrix[!is.na(raster_matrix)])
-  raster_matrix_normalized <- apply(raster_matrix, MARGIN = c(1,2), FUN = function(x) x/(trait_max))
+  raster_matrix_normalized <- apply(raster_matrix, MARGIN = c(1,2), FUN = function(x) x/(raster_max))
   
   return (raster_matrix_normalized)
 }
