@@ -26,7 +26,8 @@ dataThresholds_df <- data.frame(traits,dataThresholds_min,dataThresholds_max,
 outputfile_descriptor <- "RussianRiver_2018"
 
 # Physiological traits to include in diversity metrics; pick 3
-traits_4_diversity <- c("Carbon","Cellulose","Phosphorus")
+#traits_4_diversity <- c("Carbon","Cellulose","Fiber","Lignin","LMA","Nitrogen","NSC","Phenolics","Phosphorus","Sugar")
+traits_4_diversity <- c("Carbon","Fiber","Phosphorus")
 
 # Diversity resolution; note this must contain multiple pixels of your higher-resolution
 # imaging spectrscopy functional traits. For example, if you have trait pixels of 15 x 15 m2

@@ -13,6 +13,7 @@ library(mgcv)
 #library(rdist)
 library(RiemBase)
 library(factoextra)
+library(NbClust)
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Preprocess.R")
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Initial_Parameters.R")
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Diversity.R")
@@ -45,23 +46,43 @@ rm(temp)
 # Prep your matrix
 trait_datastack <- trait_matrix_prep(mosaic_size_1D, traits, traits_4_diversity, 
                                      path, AVIRISmosaics)
+# Select number of clusters 
+# Good Tutorial: https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#kmeans-with-2-groups
+# randomly select subset to test # of clusters
+random_sample_indices <- sample(1:dim(na.omit(trait_datastack))[1],1000)
 
-# Before removing NAs to run kmeans, store their indices
-not_nan_indices <- match(na.omit(trait_datastack)[,1],trait_datastack[,1])
+# Elbow method
+fviz_nbclust(na.omit(trait_datastack)[random_sample_indices,], kmeans, method = "wss") +
+  geom_vline(xintercept = 4, linetype = 2) + # add line for better visualisation
+  labs(subtitle = "Elbow method") # add subtitle
 
-# run your cluster and save to matrix
-cluster_matrix <- matrix(data=NA,nrow = dim(trait_datastack)[1], ncol = 1)
-functional_clusters <- kmeans(na.omit(trait_datastack),centers = 6,nstart=10)
-cluster_matrix[not_nan_indices,1] <- functional_clusters$cluster
-cluster_2d <- matrix(cluster_matrix,nrow=mosaic_size[1], byrow = TRUE)
+## Silhouette method
+fviz_nbclust(na.omit(trait_datastack)[random_sample_indices,], kmeans, method = "silhouette") +
+  labs(subtitle = "Silhouette method")
 
-# export to geotiff
-cluster_raster <- raster(cluster_2d)
-extent(cluster_raster) <- mosaic_extent
-crs(cluster_raster) <- mosaic_crs
-#rotated(cluster_raster) <- mosaic_rotated
-#rotate(cluster_raster) <- mosaic_rotation
-writeRaster(cluster_raster,paste0(AVIRISpath,outputfile_descriptor,"_kmeans.tif"),overwrite=TRUE)
+cluster_raster <- kmeans_trait_data(trait_datastack,k,AVIRISpath,outputfile_descriptor,
+                              mosaic_extent,mosaic_crs)
+# # Before removing NAs to run kmeans, store their indices
+# not_nan_indices <- match(na.omit(trait_datastack)[,1],trait_datastack[,1])
+# 
+# # run your cluster
+# functional_clusters <- kmeans(na.omit(trait_datastack),centers = 4)
+# 
+# # how good are our clusters?
+# BSS <- functional_clusters$betweenss
+# TSS <- functional_clusters$totss
+# (percent_explained <- BSS / TSS * 100)
+
+# # map clusters back to 2d
+# cluster_matrix <- matrix(data=NA,nrow = dim(trait_datastack)[1], ncol = 1)
+# cluster_matrix[not_nan_indices,1] <- functional_clusters$cluster
+# cluster_2d <- matrix(cluster_matrix,nrow=mosaic_size[1], byrow = TRUE)
+# 
+# # export to geotiff
+# cluster_raster <- raster(cluster_2d)
+# extent(cluster_raster) <- mosaic_extent
+# crs(cluster_raster) <- mosaic_crs
+# writeRaster(cluster_raster,paste0(AVIRISpath,outputfile_descriptor,"_kmeans.tif"),overwrite=TRUE)
 
 
 

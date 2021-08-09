@@ -1,5 +1,35 @@
-kmeans_trait_data <- function(){
+kmeans_trait_data <- function(trait_datastack,k,AVIRISpath,outputfile_descriptor,
+                              mosaic_extent,mosaic_crs){
   
+  # Before removing NAs to run kmeans, store their indices
+  not_nan_indices <- match(na.omit(trait_datastack)[,1],trait_datastack[,1])
+  
+  # run your cluster
+  functional_clusters <- kmeans(na.omit(trait_datastack),centers = k)
+  
+  # how good are our clusters?
+  BSS <- functional_clusters$betweenss
+  TSS <- functional_clusters$totss
+  percent_explained <- BSS / TSS * 100
+  
+  # map clusters back to 2d
+  cluster_matrix <- matrix(data=NA,nrow = dim(trait_datastack)[1], ncol = 1)
+  cluster_matrix[not_nan_indices,1] <- functional_clusters$cluster
+  cluster_2d <- matrix(cluster_matrix,nrow=mosaic_size[1], byrow = TRUE)
+  
+  # export to geotiff
+  cluster_raster <- raster(cluster_2d)
+  extent(cluster_raster) <- mosaic_extent
+  crs(cluster_raster) <- mosaic_crs
+  writeRaster(cluster_raster,paste0(AVIRISpath,outputfile_descriptor,"_kmeans.tif"),
+              overwrite=TRUE)
+  
+  print(paste0("Cluster ran successfully and wrote a file to: ",
+               AVIRISpath,outputfile_descriptor,
+               "_kmeans.tif. The percentage Total Sum of Squares explained is: ",
+               precent_explained))
+  
+  return(cluster_raster)
 }
 
 extract_pixel_trait_value <- function(AVIRISdata, point_locations_longitude, 
