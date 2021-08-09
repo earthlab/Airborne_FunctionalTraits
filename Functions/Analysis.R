@@ -1,3 +1,7 @@
+kmeans_trait_data <- function(){
+  
+}
+
 extract_pixel_trait_value <- function(AVIRISdata, point_locations_longitude, 
                                       point_locations_latitude){
   # Precondition: AVIRISdata is a raster object, point_locations is a vector of

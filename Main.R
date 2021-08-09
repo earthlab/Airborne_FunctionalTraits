@@ -10,13 +10,15 @@ library(sf)
 library(ggplot2)
 library(caTools)
 library(mgcv)
-library(rdist)
+#library(rdist)
+library(RiemBase)
+library(factoextra)
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Preprocess.R")
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Initial_Parameters.R")
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Diversity.R")
 
 
-## Prep Trait data into mosaics
+####### Prep Trait data into mosaics #######
 AVIRISmosaics <- 
   list.files(AVIRISpath,pattern= paste0(outputfile_descriptor,"_mosaic_"))
 
@@ -30,19 +32,55 @@ if (length(AVIRISmosaics) == 0){
                      outputfile_descriptor = outputfile_descriptor) 
 }
 
+####### Do an Analysis #######
 # Read in one trait mosaic to determine size
 temp <- raster(paste0(AVIRISpath,AVIRISmosaics[1]),band=1)
 mosaic_size <- dim(temp)
 mosaic_size_1D <- mosaic_size[1]*mosaic_size[2]
+mosaic_extent <- temp@extent
+mosaic_crs <- temp@crs
 rm(temp)
 
-## Calculate Diversity Geotiffs
+## Run K-means
+# Prep your matrix
+trait_datastack <- trait_matrix_prep(mosaic_size_1D, traits, traits_4_diversity, 
+                                     path, AVIRISmosaics)
+
+# Before removing NAs to run kmeans, store their indices
+not_nan_indices <- match(na.omit(trait_datastack)[,1],trait_datastack[,1])
+
+# run your cluster and save to matrix
+cluster_matrix <- matrix(data=NA,nrow = dim(trait_datastack)[1], ncol = 1)
+functional_clusters <- kmeans(na.omit(trait_datastack),centers = 6,nstart=10)
+cluster_matrix[not_nan_indices,1] <- functional_clusters$cluster
+cluster_2d <- matrix(cluster_matrix,nrow=mosaic_size[1], byrow = TRUE)
+
+# export to geotiff
+cluster_raster <- raster(cluster_2d)
+extent(cluster_raster) <- mosaic_extent
+crs(cluster_raster) <- mosaic_crs
+#rotated(cluster_raster) <- mosaic_rotated
+#rotate(cluster_raster) <- mosaic_rotation
+writeRaster(cluster_raster,paste0(AVIRISpath,outputfile_descriptor,"_kmeans.tif"),overwrite=TRUE)
+
+
+
+
+
+
+
+
+####### Calculate Functional Diversity #######
+# Find new grid spacings at coarser res for diversity calculation
+# Normalize trait rasters
+# Loop through all coarse grid cells to calculate trait diversity matrix and then diversity metrics by grid cell
+# put grid cells back together into raster
+
+
 Trait_Diversity_Matrix <- trait_matrix_prep(mosaic_size_1D, traits, traits_4_diversity, 
                                                         AVIRISpath, AVIRISmosaics)
 
 # Create Diversity Matrices
 physio_divergence <- functional_divergence(Trait_Diversity_Matrix)
-
-# Rasterize Diversity matrices raster information
 
 # Write Raster to Geotiff
