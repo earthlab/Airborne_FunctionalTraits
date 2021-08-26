@@ -3,21 +3,29 @@ library(raster)
 library(gdalUtils)
 library(sf)
 library(ggplot2)
+library(caTools)
 
-clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
+clean_AVIRISFlightTraits <- function(trait_list, path, trait, perimeter,datatype,
                                      missingData,dataThresholds,saveFile=FALSE){
-  # Preconditions:traitGeoTiffs = list of trait geotiff file names as strings, 
+  # Preconditions:trait_list = list of trait geotiff file names as strings, 
   #       assumed to be in the same folder, path is a string with the path
   #       to that folder; trait = the string of the trait name as spelt in filename,
   #       missingData is the data value used for missing data and the
   #       dataThresholds is a list with the max value for "reasonable" data and
   #       the min value for "reasonable data. Savefile = FALSE
-  #       will remove the warpped, clipped geotiff; TRUE will keep it.
+  #       will remove the warpped, clipped geotiff; TRUE will keep it. datatype 
+  #       is either "tiff" for geotiff or "envi" for envi binary .dat file with 
+  #       associated .hdr header file
   
   # Postcondition: list of clipped and cleaned rasters of each flightline
   
   # get list of all flightlines in folder
-  trait_data = Filter(function(x) grepl(trait,x), traitGeoTiffs)
+  trait_data = Filter(function(x) grepl(trait,x), trait_list)
+  
+  if (datatype == "envi"){
+    trait_data = Filter(function(x) grepl(".hdr",x), trait_list)
+    trait_data = stringr::str_remove_all(trait_data,".hdr")
+  }
   
   flightline_data = list()
   for (i in 1:length(trait_data)){
@@ -26,9 +34,19 @@ clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
     # create datafile path and name
     datafile <- paste(path,trait_data[i],sep="")
     
-    data1 <- raster(datafile,band=1)
-    crs_reference <- crs(data1)
-    rm(data1)
+    if (file.exists(datafile)){
+      if (datatype == "tiff"){
+        data1 <- raster(datafile,band=1)
+        crs_reference <- crs(data1)
+        rm(data1)
+      } else if (datatype =="envi"){
+        data1 <- readLines(paste0(datafile,".hdr"))
+        crs_index <- which(grepl("coordinate system string",data1))
+        clean_crs_str <- stringr::str_remove_all(data1[13],"\"")
+        if (str_detect(clean_crs_str,"UTM_Zone_13N")){proj_str <- "+init=EPSG:32613"}
+        crs_reference <- crs(proj_str)
+      } else {print("unsupported file format of trait data")}
+    } else {print(paste0(datafile," does not exist."))}
 
     # rotate and clip data files to bounding perimeter
     data_rectified <- gdalwarp(srcfile = datafile,
@@ -57,7 +75,7 @@ clean_AVIRISFlightTraits <- function(traitGeoTiffs, path, trait, perimeter,
   return(flightline_data)
 }
 
-mosaic_flightlines <- function(traits, path, bounding_vector, missingData,
+mosaic_flightlines <- function(traits, path, bounding_vector, missingData,datatype="tiff",
                                dataThresholds_upper, dataThresholds_lower,
                                save_intermediate_output = FALSE,outputfile_descriptor){
   # Preconditions: traits are a list of strings specifying the traits to process,
@@ -70,7 +88,8 @@ mosaic_flightlines <- function(traits, path, bounding_vector, missingData,
   #       the traits (see Wang et al 2020, New Phytologist). save_intermediate_output
   #       determines whether we save the clipped flightline data pre-mosaic.
   #       outputfile_descriptor is a string for naming the output file. Recommend
-  #       "FlightboxName_date" or something equivalent.
+  #       "FlightboxName_date" or something equivalent. datatype is either "tiff" for
+  #       geotiff or "envi" for envi binary .dat file with associated .hdr header file
   
   # Postcondition: A saved geotiff under path of the mosaicked traits
   
@@ -78,15 +97,14 @@ mosaic_flightlines <- function(traits, path, bounding_vector, missingData,
   for (i in 1:length(traits)){
     print (paste("Working on trait: ",traits[i],sep=""))
     
-    # get geotiff list
-    AVIRIStifs <- list.files(path,pattern="\\.tif$") #list all Tifs
-    trait_data <- Filter(function(x) grepl(traits[i],x), AVIRIStifs)
+    # get list of all flightlines
+    AVIRISdata <- list.files(path,pattern = traits[i])
     
     # Clean Data, but first check if you have run this function before 
     # and if you have clipped flightlines already, skip this step
-    trait_data_clipped <- Filter(function(x) grepl("clip",x), trait_data)
+    trait_data_clipped <- Filter(function(x) grepl("clip",x), AVIRISdata)
     if (length(trait_data_clipped) == 0){
-      flightline_data <- clean_AVIRISFlightTraits(traitGeoTiffs = trait_data, 
+      flightline_data <- clean_AVIRISFlightTraits(trait_list = AVIRISdata, datatype = datatype,
                                                   path = path,
                                                   trait = traits[i], 
                                                   missingData = missingData,

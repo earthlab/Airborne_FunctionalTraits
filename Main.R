@@ -14,6 +14,7 @@ library(mgcv)
 library(RiemBase)
 library(factoextra)
 library(NbClust)
+library(stringr)
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Preprocess.R")
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Initial_Parameters.R")
 source("/Users/natasha/Coding/RFunctions/Airborne_FunctionalTraits/Functions/Diversity.R")
@@ -27,6 +28,7 @@ if (length(AVIRISmosaics) == 0){
   # Mosaic Flightlines assuming all flightlines are saved to one path
   mosaic_flightlines(traits = traits, path = AVIRISpath,
                      bounding_vector = boundingKML, missingData = missingData,
+                     datatype=datatype,
                      dataThresholds_upper = dataThresholds_upper,
                      dataThresholds_lower = dataThresholds_lower,
                      save_intermediate_output = FALSE, 

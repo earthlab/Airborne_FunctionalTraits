@@ -1,6 +1,9 @@
 kmeans_trait_data <- function(trait_datastack,k,AVIRISpath,outputfile_descriptor,
                               mosaic_extent,mosaic_crs){
   
+  # Pre-condition:
+  # Post-condition:
+  
   # Before removing NAs to run kmeans, store their indices
   not_nan_indices <- match(na.omit(trait_datastack)[,1],trait_datastack[,1])
   
