@@ -86,24 +86,3 @@ cluster_raster <- kmeans_trait_data(trait_datastack,k,AVIRISpath,outputfile_desc
 # crs(cluster_raster) <- mosaic_crs
 # writeRaster(cluster_raster,paste0(AVIRISpath,outputfile_descriptor,"_kmeans.tif"),overwrite=TRUE)
 
-
-
-
-
-
-
-
-####### Calculate Functional Diversity #######
-# Find new grid spacings at coarser res for diversity calculation
-# Normalize trait rasters
-# Loop through all coarse grid cells to calculate trait diversity matrix and then diversity metrics by grid cell
-# put grid cells back together into raster
-
-
-Trait_Diversity_Matrix <- trait_matrix_prep(mosaic_size_1D, traits, traits_4_diversity, 
-                                                        AVIRISpath, AVIRISmosaics)
-
-# Create Diversity Matrices
-physio_divergence <- functional_divergence(Trait_Diversity_Matrix)
-
-# Write Raster to Geotiff
